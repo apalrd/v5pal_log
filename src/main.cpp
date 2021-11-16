@@ -4,39 +4,137 @@
 #include "pros/apix.h"
 #include "display/lvgl.h"
 
-static int color;
-static int position;
+static int active_mode;
+
+/* 5 buttons for starting positions (4 match, 1 skills) */
+static lv_obj_t * btn_pos[5];
+static char * btn_label[5] = 
+{
+	"Red 1",
+	"Red 2",
+	"Blue 1",
+	"Blue 2",
+	"Skills"
+};
+static lv_align_t btn_align[5] = 
+{
+	LV_ALIGN_IN_TOP_LEFT,
+	LV_ALIGN_IN_BOTTOM_LEFT,
+	LV_ALIGN_IN_BOTTOM_RIGHT,
+	LV_ALIGN_IN_TOP_RIGHT,
+	LV_ALIGN_CENTER
+};
+
+/* Styles */
+static lv_style_t style_red_ina, style_red_act;
+static lv_style_t style_blue_ina, style_blue_act;
+static lv_style_t style_gold_ina, style_gold_act;
+
+/* Styles associated with each starting position button in the inactive and active states */
+static lv_style_t * btn_styles[5][2] = 
+{
+	{&style_red_ina, &style_red_act},
+	{&style_red_ina, &style_red_act},
+	{&style_blue_ina, &style_blue_act},
+	{&style_blue_ina, &style_blue_act},
+	{&style_gold_ina, &style_gold_act}
+};
 
 /* Button callback */
-static void auto_picker_cb(lv_event_t * e)
+static  lv_res_t btn_pos_cb(lv_obj_t * btn)
 {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t * btn = lv_event_get_target(e);
-    if(code == LV_EVENT_CLICKED) 
+    /* Find which index we are */
+	int idx;
+	for(idx = 0; idx < 5; idx++)
 	{
-		
-    }
+		if(btn == btn_pos[idx])
+		{
+			break;
+		}
+	}
+	active_mode = idx;
+	/* Toggle off all buttons but toggle on ours */
+	for(int i = 0; i < 5; i++)
+	{
+		if(i == idx)
+		{
+			/* Toggle on */
+			lv_obj_set_style(btn_pos[i],btn_styles[i][1]);
+		}
+		else
+		{
+			/* Toggle off */
+			lv_obj_set_style(btn_pos[i],btn_styles[i][0]);
+		}
+	}
+    return LV_RES_OK;
 }
 
 
-void auto_picker_screen_1(void)
+void auto_picker(void)
 {
 	/* Draw image of the field */
     LV_IMG_DECLARE(field);
-    lv_obj_t * img1 = lv_img_create(lv_scr_act(),0);
-    lv_img_set_src(img1, &field);
-    lv_obj_align(img1, 0, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-    lv_obj_set_size(img1, 240, 240);
+    lv_obj_t * fieldimg = lv_img_create(lv_scr_act(),0);
+    lv_img_set_src(fieldimg, &field);
+    lv_obj_align(fieldimg, 0, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+    lv_obj_set_size(fieldimg, 240, 240);
 
-	/* Create 4 buttons, 2 red and 2 blue, for each starting position */
-	lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
-    lv_obj_set_pos(btn, 10, 10);                            /*Set its position*/
-    lv_obj_set_size(btn, 120, 50);                          /*Set its size*/
-    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
+	/* Declare label for later */
+	lv_obj_t * label;
 
-    lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
-    lv_label_set_text(label, "Button");                     /*Set the labels text*/
-    lv_obj_center(label);
+	/* Create red style by copying default button style */
+	lv_style_copy(&style_red_ina,&lv_style_btn_ina);
+	style_red_ina.body.main_color=LV_COLOR_RED;
+	style_red_ina.body.grad_color=LV_COLOR_RED;
+	style_red_ina.body.border.color = LV_COLOR_BLACK;
+	style_red_ina.body.border.width = 5;
+	style_red_ina.text.color = LV_COLOR_BLACK;
+
+	/* Create active style in slightly different colors */
+	lv_style_copy(&style_red_act,&style_red_ina);
+	style_red_act.body.border.color = LV_COLOR_WHITE;
+
+	/* Copy blue style also */
+	lv_style_copy(&style_blue_ina,&style_red_ina);
+	style_blue_ina.body.main_color=LV_COLOR_BLUE;
+	style_blue_ina.body.grad_color=LV_COLOR_BLUE;
+	lv_style_copy(&style_blue_act,&style_blue_ina);
+	style_blue_act.body.border.color = LV_COLOR_WHITE;
+
+	/* Copy gold finally */
+	lv_style_copy(&style_gold_ina,&style_red_ina);
+	style_gold_ina.body.main_color=LV_COLOR_YELLOW;
+	style_gold_ina.body.grad_color=LV_COLOR_YELLOW;
+	lv_style_copy(&style_gold_act,&style_gold_ina);
+	style_gold_act.body.border.color = LV_COLOR_WHITE;
+	//lv_style_set_bg_color(&style_btn, lv_color_grey());
+	//lv_style_set_bg_opa(&style_btn, LV_OPA_50);
+	//lv_style_set_border_width(&style_btn, 2);
+	//lv_style_set_border_color(&style_btn, lv_color_black());
+
+	/* Create 4 buttons, 2 red and 2 blue, for each starting position, plus one for skills */
+	for(int i = 0; i < 5; i++)
+	{
+		/* Create button */
+		btn_pos[i] = lv_btn_create(lv_scr_act(), NULL);
+		lv_btn_set_action(btn_pos[i],LV_BTN_ACTION_CLICK,btn_pos_cb);
+
+		/* Set Style */
+		lv_btn_set_style(btn_pos[i],LV_BTN_STYLE_INA,btn_styles[i][0]);
+		lv_btn_set_style(btn_pos[i],LV_BTN_STYLE_PR,btn_styles[i][1]);
+		lv_btn_set_style(btn_pos[i],LV_BTN_STYLE_REL,btn_styles[i][0]);
+
+		/* Size the button */
+		lv_obj_set_size(btn_pos[i], 66, 66);
+
+		/* Align button to corner of the field */
+		lv_obj_align(btn_pos[i],fieldimg,btn_align[i],0,0);
+
+		/* Add label */
+		label = lv_label_create(btn_pos[i],NULL);
+		lv_label_set_text(label,btn_label[i]);
+	}
 }
 
 
@@ -103,6 +201,9 @@ void initialize() {
 	log_param("gps_acc_y");
 	log_param("gps_acc_z");
 	log_param("gps_error");
+	log_param("gps_gyro_x");
+	log_param("gps_gyro_y");
+	log_param("gps_gyro_z");
 
 	/* Encoder channels */
 	log_param("left_vel");
@@ -117,7 +218,7 @@ void initialize() {
 	log_param("right_temp");
 
 	/* Call LV test function */
-	auto_picker_screen_1();
+	auto_picker();
 
 }
 
@@ -225,7 +326,7 @@ void log_imu_data()
 void log_gps_data()
 {
 	/* Data arrays */
-	double dataDbl[11];
+	double dataDbl[14];
 
 	/* Static GPS */
 	static pros::GPS gps(8);
@@ -251,8 +352,33 @@ void log_gps_data()
 	/* Precision */
 	dataDbl[10] = gps.get_error();
 
+	/* Gyro rates */
+	//pros::c::gps_gyro_s_t gyro = gps.get_gyro_rate();
+	//dataDbl[11] = gyro.x;
+	//dataDbl[12] = gyro.y;
+	//dataDbl[13] = gyro.z;
+
 	/* Publish data */
-	log_data(0,0,11,dataDbl);
+	log_data(0,0,14,dataDbl);
+
+	#if 0
+	printf("GPS x=%1.3f y=%1.3f h=%3.1f r=%2.3f e=%3.3f pt%2.1f yw%3.1f rl%2.1f", 
+			dataDbl[0],
+			dataDbl[1],
+			dataDbl[5],
+			dataDbl[6],
+			dataDbl[10],
+			dataDbl[2],
+			dataDbl[3],
+			dataDbl[4]);
+	printf("ax%0.2f ay%0.2f az%0.2f gx%f gy%f gz%f\n",
+			dataDbl[7],
+			dataDbl[8],
+			dataDbl[9],
+			dataDbl[11],
+			dataDbl[12],
+			dataDbl[13]);
+	#endif
 }
 
 /* Log motor data */
@@ -356,6 +482,6 @@ void opcontrol()
 		log_imu_data();
 		log_gps_data();
 		log_motor_data();
-		pros::delay(20);
+		pros::delay(50);
 	}
 }
