@@ -1,6 +1,47 @@
 #include "main.h"
 #include "stdio.h"
 #include "log.h"
+#include "auto.h"
+
+/* Auto functions */
+void auto_skills_1(auto_color_t,auto_pos_t)
+{
+
+}
+void auto_skills_2(auto_color_t,auto_pos_t)
+{
+
+}
+void auto_match_p1_1(auto_color_t,auto_pos_t)
+{
+
+}
+void auto_match_p1_2(auto_color_t,auto_pos_t)
+{
+
+}
+void auto_match_p2_1(auto_color_t,auto_pos_t)
+{
+
+}
+void auto_match_p2_2(auto_color_t,auto_pos_t)
+{
+
+}
+
+
+/* List of autonomous routines */
+const auto_routine_t auto_list[] =
+{
+	/* Robot skills options */
+	{ auto_skills_1, AUTO_POS_SKILLS, "Skills 1"},
+	{ auto_skills_2, AUTO_POS_SKILLS, "Skills 2"},
+	/* Match autos */
+	{ auto_match_p1_1, AUTO_POS_1, "Match P1 #1"},
+	{ auto_match_p1_2, AUTO_POS_1, "Match P1 #2"},
+	{ auto_match_p2_1, AUTO_POS_2, "Match P2 #1"},
+	{ auto_match_p2_2, AUTO_POS_2, "Match P2 #2"},
+};
 
 
 /**
@@ -11,11 +52,14 @@
  */
 void initialize() 
 {
-
+	printf("Begun Init\n");
 
 	/* Initialize logger */
 	log_init();
 
+	LOG_INFO("In Initialize");
+
+#if 0
 	/* Competition mode channels  */
 	log_param("comp_dis");
 	log_param("comp_auto");
@@ -83,9 +127,9 @@ void initialize()
 	log_param("right_pos");
 	log_param("right_volt");
 	log_param("right_temp");
-
+#endif
 	/* Call LV test function */
-	auto_picker();
+	//auto_picker(auto_list, sizeof(auto_list)/sizeof(auto_routine_t));
 
 }
 
@@ -100,7 +144,7 @@ void log_comp_data()
 	data[0] = pros::competition::is_disabled();
 	data[1] = pros::competition::is_autonomous();
 	data[2] = pros::competition::is_connected();
-	log_data(3,data,0,0);
+	//log_data(3,data,0,0);
 }
 
 /* Get battery data */
@@ -111,7 +155,7 @@ void log_batt_data()
 	dataDbl[1] = pros::battery::get_voltage();
 	dataDbl[2] = pros::battery::get_current();
 	dataDbl[3] = pros::battery::get_temperature();
-	log_data(0,0,4,dataDbl);
+	//log_data(0,0,4,dataDbl);
 }
 
 /* Get control data */
@@ -155,7 +199,7 @@ void log_ctrl_data()
 	dataInt[11] = master.get_digital(DIGITAL_R2);
 
 	/* Publish data */
-	log_data(12,dataInt,4,dataDbl);
+	//log_data(12,dataInt,4,dataDbl);
 }
 
 void log_imu_data()
@@ -186,7 +230,7 @@ void log_imu_data()
 	dataDbl[7] = accel.z;
 
 	/* Log data */
-	log_data(1,dataInt,8,dataDbl);
+	//log_data(1,dataInt,8,dataDbl);
 }
 
 /* Log GPS Data */
@@ -226,7 +270,7 @@ void log_gps_data()
 	//dataDbl[13] = gyro.z;
 
 	/* Publish data */
-	log_data(0,0,14,dataDbl);
+	//log_data(0,0,14,dataDbl);
 
 	#if 0
 	printf("GPS x=%1.3f y=%1.3f h=%3.1f r=%2.3f e=%3.3f pt%2.1f yw%3.1f rl%2.1f", 
@@ -268,7 +312,7 @@ void log_motor_data()
 	dataDbl[9] = drive_right.get_temperature();
 
 	/* Log data */
-	log_data(0,0,10,dataDbl);
+	//log_data(0,0,10,dataDbl);
 }
 /**
  * Runs while the robot is in the disabled state of Field Management System or
@@ -277,7 +321,9 @@ void log_motor_data()
  */
 void disabled()
 {
-	opcontrol();
+	printf("In disabled\n");
+	LOG_ERROR("In Disabled");
+	//opcontrol();
 }
 
 /**
@@ -291,7 +337,8 @@ void disabled()
  */
 void competition_initialize()
 {
-	
+	printf("In competition_initialize\n");
+	LOG_ERROR("In Competition Initialize");
 }
 
 /**
@@ -307,7 +354,9 @@ void competition_initialize()
  */
 void autonomous() 
 {
-	opcontrol();
+	printf("In autonomous\n");
+	LOG_ERROR("In Autonomous");
+	//opcontrol();
 }
 
 /**
@@ -325,16 +374,21 @@ void autonomous()
  */
 void opcontrol() 
 {
+	printf("In opcontrol\n");
+	LOG_ERROR("In Opcontrol");
+	static uint32_t prev_time = pros::c::millis();
 	while(1)
 	{
 		/* read axes and buttons */
-		log_step();
+		//log_step();
 		log_comp_data();
 		log_batt_data();
 		log_ctrl_data();
 		log_imu_data();
 		log_gps_data();
 		log_motor_data();
-		pros::delay(20);
+		LOG_DEBUG("The task has run again");
+		pros::c::task_delay_until(&prev_time,20);
+		return;
 	}
 }
