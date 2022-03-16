@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 /* Need to define log level for this file lol */
-#define LOG_LEVEL_FILE LOG_LEVEL_INFO
-#include "log.h"
+#define LOG_LEVEL_FILE LOG_LEVEL_WARN
+#include "pal/log.h"
 
 /* Variables which are exported */
 FILE* fd;
@@ -64,7 +64,7 @@ void log_reopen(int segment)
             /* Close index for now */
             fclose(fidx);
         }
-        LOG_INFO("New index is %d",idx);
+        LOG_INFO("New file index is %d",idx);
 
         /* In any case, reopen the index file to write the latest file index */
         fidx = fopen("/usd/index.txt","w");
@@ -86,7 +86,7 @@ void log_reopen(int segment)
         /* Check for errors in the process */
         if(fd)
         {
-            LOG_INFO("Log file opened (%s)",fname);
+            LOG_ALWAYS("Log file opened (%s)",fname);
         }
         else
         {
@@ -94,7 +94,7 @@ void log_reopen(int segment)
         }
         if(dd)
         {
-            LOG_INFO("Data file opened (%s)",dname);
+            LOG_ALWAYS("Data file opened (%s)",dname);
         }
         else
         {
@@ -110,7 +110,7 @@ void log_reopen(int segment)
     /* If it was previously installed and isn't any more, close the files and set them null */
     else if(!uSD_avail && uSD_last)
     {
-        LOG_WARN("SD now unavailable, closing files");
+        LOG_ALWAYS("uSD now unavailable");
         fclose(fd);
         fclose(dd);
         fd = NULL;
@@ -119,12 +119,6 @@ void log_reopen(int segment)
     /* If the uSD is currently valid and was previously valid, reopen the file again */
     else if(uSD_avail && uSD_last)
     {
-        /* Raise the current task priority temporarily so we can ensure that the file handle
-            * is null during the reopen, in case any other tasks try to write to the pointer
-            * This prevents our task from hogging the CPU during the reopen by
-            * raising our priority for the entire duration, while ensuring that the
-            * pointer is properly null when we begin the operation
-            */
         LOG_DEBUG("About to swap file handles");
         //task_set_priority(CURRENT_TASK,TASK_PRIORITY_MAX);
         FILE* fd_temp = fd;

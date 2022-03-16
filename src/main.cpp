@@ -1,50 +1,20 @@
 #include "main.h"
 #include "stdio.h"
-#include "log.h"
-#include "auto.h"
 
-/* Auto functions */
-void auto_skills_1(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Skills 1, color is %d, pos is %d",color,pos);
-}
-void auto_skills_2(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Skills 2, color is %d, pos is %d",color,pos);
-}
-void auto_match_p1_1(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Match P1 1, color is %d, pos is %d",color,pos);
-}
-void auto_match_p1_2(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Match P1 2, color is %d, pos is %d",color,pos);
-}
-void auto_match_p2_1(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Match P2 1, color is %d, pos is %d",color,pos);
-}
-void auto_match_p2_2(auto_color_t color,auto_pos_t pos)
-{
-	LOG_ALWAYS("I am Auto Match P2 2, color is %d, pos is %d",color,pos);
-}
-
-
-/* List of autonomous routines */
-const auto_routine_t auto_list[] =
-{
-	/* Robot skills options */
-	{ auto_skills_1, AUTO_POS_SKILLS, "Skills 1"},
-	{ auto_skills_2, AUTO_POS_SKILLS, "Skills 2"},
-	{ auto_skills_1, AUTO_POS_SKILLS, "Skills 3"},
-	{ NULL, AUTO_POS_SKILLS, "Skills 4"},
-	/* Match autos */
-	{ auto_match_p1_1, AUTO_POS_1, "Match P1 #1"},
-	{ auto_match_p1_2, AUTO_POS_1, "Match P1 #2"},
-	{ auto_match_p2_1, AUTO_POS_2, "Match P2 #1"},
-	{ auto_match_p2_2, AUTO_POS_2, "Match P2 #2"},
-};
-
+/* Before including this header, you can optionally define a level
+ * to log to. If you do not define this, it will default to WARN
+ * 
+ * The logger will log all messages of the level defined here or higher
+ * 
+ * The levels are:
+ * LOG_LEVEL_DEBUG (lowest)
+ * LOG_LEVEL_INFO
+ * LOG_LEVEL_WARN
+ * LOG_LEVEL_ERROR
+ * LOG_LEVEL_ALWAYS (highest)
+ */
+#define LOG_LEVEL_FILE LOG_LEVEL_DEBUG
+#include "pal/log.h"
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -54,23 +24,31 @@ const auto_routine_t auto_list[] =
  */
 void initialize() 
 {
-	/* Initialize logger */
+	/* Initialize logger - this must be early in your initialization */
 	log_init();
 
-	LOG_INFO("In Initialize");
-
-	/* Call Auto Picker */
-	auto_picker(auto_list, sizeof(auto_list)/sizeof(auto_routine_t));
-
+	/* Let them know we are in initialize */
+	LOG_ALWAYS("In Initialize");
 }
-
-/* Drive motors */
-static pros::Motor drive_left(1,pros::E_MOTOR_GEARSET_18,true,pros::E_MOTOR_ENCODER_ROTATIONS);
-static pros::Motor drive_right(10,pros::E_MOTOR_GEARSET_18,false,pros::E_MOTOR_ENCODER_ROTATIONS);
 
 /* Get competition mode */
 void log_comp_data()
 {
+	/* To log data, use the log_data_int or log_data_dbl functions
+	 * Each takes a string parameter name and int or dbl value
+	 *
+	 * For the first iteration after log_step() after log_init
+	 * or log_segment(), the data will be ignored and the CSV 
+	 * header will be generated. For subsequent iterations,
+	 * the data will be logged to the CSV file
+	 * 
+	 * Ensure that you always call log_data in the same order
+	 * for each loop iteration, as v5logger does not cache any data
+	 * and will write directly to the csv in the order it is called
+	 * 
+	 * Therefore, any changes to the order of log_data calls will
+	 * result in misaligned columns in the CSV file
+	 */
 	log_data_int("COMP_DISABLED",pros::competition::is_disabled());
 	log_data_int("COMP_AUTONOMOUS",pros::competition::is_autonomous());
 	log_data_int("COMP_CONNECTED",pros::competition::is_connected());
@@ -80,8 +58,8 @@ void log_comp_data()
 void log_batt_data()
 {
 	log_data_dbl("BATT_CAP",pros::battery::get_capacity());
-	log_data_dbl("BATT_VOLT",pros::battery::get_voltage());
-	log_data_dbl("BATT_CUR",pros::battery::get_current());
+	log_data_dbl("BATT_VOLT",pros::battery::get_voltage()/1000.0);
+	log_data_dbl("BATT_CUR",pros::battery::get_current()/1000.0);
 	log_data_dbl("BATT_TEMP",pros::battery::get_temperature());
 }
 
@@ -92,24 +70,16 @@ void log_ctrl_data()
 	static pros::Controller master(CONTROLLER_MASTER);
 
 	/* Read axes */
-	log_data_dbl,("CRTL_MSTR_LY",master.get_analog(ANALOG_LEFT_Y));
-	log_data_dbl,("CRTL_MSTR_LX",master.get_analog(ANALOG_LEFT_X));
-	log_data_dbl,("CRTL_MSTR_RY",master.get_analog(ANALOG_RIGHT_Y));
-	log_data_dbl,("CRTL_MSTR_RX",master.get_analog(ANALOG_RIGHT_X));
-
-	/* Control motors */
-	double forward = master.get_analog(ANALOG_LEFT_Y);
-	double turn = master.get_analog(ANALOG_RIGHT_X);
-	double left = forward + turn;
-	double right = forward - turn;
-	drive_left.move(left);
-	drive_right.move(right);
+	log_data_dbl("CRTL_MSTR_LY",master.get_analog(ANALOG_LEFT_Y));
+	log_data_dbl("CRTL_MSTR_LX",master.get_analog(ANALOG_LEFT_X));
+	log_data_dbl("CRTL_MSTR_RY",master.get_analog(ANALOG_RIGHT_Y));
+	log_data_dbl("CRTL_MSTR_RX",master.get_analog(ANALOG_RIGHT_X));
 
 	/* Read buttons for D-pad */
 	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_LEFT));
-	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_RIGHT));
-	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_UP));
-	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_DOWN));
+	log_data_int("CTRL_MSTR_DR",master.get_digital(DIGITAL_RIGHT));
+	log_data_int("CTRL_MSTR_DU",master.get_digital(DIGITAL_UP));
+	log_data_int("CTRL_MSTR_DD",master.get_digital(DIGITAL_DOWN));
 
 	/* Read buttons for ABXY */
 	log_data_int("CTRL_MSTR_DA",master.get_digital(DIGITAL_A));
@@ -122,82 +92,33 @@ void log_ctrl_data()
 	log_data_int("CTRL_MSTR_L2",master.get_digital(DIGITAL_L2));
 	log_data_int("CTRL_MSTR_R1",master.get_digital(DIGITAL_R1));
 	log_data_int("CTRL_MSTR_R2",master.get_digital(DIGITAL_R2));
-}
 
-void log_imu_data()
-{
-	/* IMU */
-	static pros::IMU emu(7);
+	/* Examples of how to use logging functions */
+	if(master.get_digital(DIGITAL_LEFT))
+	{
+		LOG_DEBUG("Digital Left was pressed!");
+	}
+	if(master.get_digital(DIGITAL_RIGHT))
+	{
+		LOG_INFO("Digital Right was pressed!");
+	}
+	if(master.get_digital(DIGITAL_UP))
+	{
+		LOG_WARN("Digital Up was pressed!");
+	}
+	if(master.get_digital(DIGITAL_DOWN))
+	{
+		LOG_ERROR("Digital Down was pressed!");
+	}
 
-	/* Get is_calibrating */
-	log_data_int("IMU_CAL",emu.is_calibrating());
-
-	/* Get Rot and Heading */
-	log_data_dbl,("IMU_HDG",emu.get_heading());
-	log_data_dbl,("IMU_ROT",emu.get_rotation());
-
-	/* Get Euler angles */
-    pros::c::euler_s_t euler = emu.get_euler();
-	log_data_dbl,("IMU_PITCH",euler.pitch);
-	log_data_dbl,("IMU_YAW",euler.yaw);
-	log_data_dbl,("IMU_ROLL",euler.roll);
-
-	/* Get Accels */
-	pros::c::imu_gyro_s_t accel = emu.get_accel();
-	log_data_dbl,("IMU_ACC_X",accel.x);
-	log_data_dbl,("IMU_ACC_Y",accel.y);
-	log_data_dbl,("IMU_ACC_Z",accel.z);
-}
-
-/* Log GPS Data */
-void log_gps_data()
-{
-	/* Static GPS */
-	static pros::GPS gps(8);
-
-	/* Get Status */
-	pros::c::gps_status_s_t status = gps.get_status();
-	log_data_dbl,("GPS_STS_X",status.x);
-	log_data_dbl,("GPS_STS_Y",status.y);
-	log_data_dbl,("GPS_PITCH",status.pitch);
-	log_data_dbl,("GPS_YAW",status.yaw);
-	log_data_dbl,("GPS_ROLL",status.roll);
-
-	/* Heading and rotation */
-	log_data_dbl,("GPS_HDG",gps.get_heading());
-	log_data_dbl,("GPS_ROT",gps.get_rotation());
-
-	/* Accles */
-	pros::c::gps_accel_s_t accel = gps.get_accel();
-	log_data_dbl,("GPS_ACC_X",accel.x);
-	log_data_dbl,("GPS_ACC_Y",accel.y);
-	log_data_dbl,("GPS_ACC_Z",accel.z);
-
-	/* Precision */
-	log_data_dbl,("GPS_ERROR",gps.get_error());
-}
-
-/* Log motor data */
-void log_motor_data()
-{
-	double dataDbl[10];
-
-	/* Left motor data */
-	dataDbl[0] = drive_left.get_actual_velocity();
-	dataDbl[1] = drive_left.get_current_draw();
-	dataDbl[2] = drive_left.get_position();
-	dataDbl[3] = drive_left.get_voltage();
-	dataDbl[4] = drive_left.get_temperature();
-
-	/* right motor data */
-	dataDbl[5] = drive_right.get_actual_velocity();
-	dataDbl[6] = drive_right.get_current_draw();
-	dataDbl[7] = drive_right.get_position();
-	dataDbl[8] = drive_right.get_voltage();
-	dataDbl[9] = drive_right.get_temperature();
-
-	/* Log data */
-	//log_data(0,0,10,dataDbl);
+	/* Informationally record joystick values to demonstrate logging with parameters
+	 * All log macros accept printf type syntax
+	 * Additionally, newlines are not required
+	 */
+	if(master.get_digital(DIGITAL_L1))
+	{
+		LOG_INFO("Joysticks are x=%d y=%d",master.get_analog(ANALOG_LEFT_X),master.get_analog(ANALOG_LEFT_Y));
+	}
 }
 /**
  * Runs while the robot is in the disabled state of Field Management System or
@@ -206,9 +127,14 @@ void log_motor_data()
  */
 void disabled()
 {
+	/* log_segment saves the current csv and txt and opens new ones with a new number
+	 * This can be used when switching from different code paths which will save different csv data
+	 * Since the column order is not guaranteed by v5logger, it is recommended to do this
+	 * whenever switching competition modes
+	 */
 	log_segment();
-	LOG_ERROR("In Disabled");
-	//opcontrol();
+	/* Let the log know we are disabled */
+	LOG_ALWAYS("In Disabled");
 }
 
 /**
@@ -223,7 +149,7 @@ void disabled()
 void competition_initialize()
 {
 	log_segment();
-	LOG_ERROR("In Competition Initialize");
+	LOG_ALWAYS("In Competition Initialize");
 }
 
 /**
@@ -241,8 +167,7 @@ void autonomous()
 {
 	/* Create a new log in auto */
 	log_segment();
-	LOG_ERROR("In Autonomous");
-	auto_run();
+	LOG_ALWAYS("In Autonomous");
 }
 
 /**
@@ -266,16 +191,12 @@ void opcontrol()
 	static uint32_t prev_time = pros::c::millis();
 	while(1)
 	{
-		/* log_step MUST be first */
+		/* log_step MUST be the first call in the loop */
 		log_step();
-		/* read axes and buttons */
+		/* Call some routines which perform robot control and log data */
 		log_comp_data();
 		log_batt_data();
 		log_ctrl_data();
-		log_imu_data();
-		log_gps_data();
-		log_motor_data();
-		LOG_DEBUG("The task has run again");
 		pros::c::task_delay_until(&prev_time,20);
 	}
 }
