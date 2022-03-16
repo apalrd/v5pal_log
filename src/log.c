@@ -250,7 +250,7 @@ int log_check(const char * fname, const int line,log_level_t level,log_level_t f
 
     /* Print the information */
     double time = millis() / 1000.0;
-    printf("\n%08.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
+    printf("%08.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
 
     /* If fd is invalid, end here, otherwise print to the file as well */
     if(!fd) return 1;

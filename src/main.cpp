@@ -4,29 +4,29 @@
 #include "auto.h"
 
 /* Auto functions */
-void auto_skills_1(auto_color_t,auto_pos_t)
+void auto_skills_1(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Skills 1, color is %d, pos is %d",color,pos);
 }
-void auto_skills_2(auto_color_t,auto_pos_t)
+void auto_skills_2(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Skills 2, color is %d, pos is %d",color,pos);
 }
-void auto_match_p1_1(auto_color_t,auto_pos_t)
+void auto_match_p1_1(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Match P1 1, color is %d, pos is %d",color,pos);
 }
-void auto_match_p1_2(auto_color_t,auto_pos_t)
+void auto_match_p1_2(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Match P1 2, color is %d, pos is %d",color,pos);
 }
-void auto_match_p2_1(auto_color_t,auto_pos_t)
+void auto_match_p2_1(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Match P2 1, color is %d, pos is %d",color,pos);
 }
-void auto_match_p2_2(auto_color_t,auto_pos_t)
+void auto_match_p2_2(auto_color_t color,auto_pos_t pos)
 {
-
+	LOG_ALWAYS("I am Auto Match P2 2, color is %d, pos is %d",color,pos);
 }
 
 
@@ -36,6 +36,8 @@ const auto_routine_t auto_list[] =
 	/* Robot skills options */
 	{ auto_skills_1, AUTO_POS_SKILLS, "Skills 1"},
 	{ auto_skills_2, AUTO_POS_SKILLS, "Skills 2"},
+	{ auto_skills_1, AUTO_POS_SKILLS, "Skills 3"},
+	{ NULL, AUTO_POS_SKILLS, "Skills 4"},
 	/* Match autos */
 	{ auto_match_p1_1, AUTO_POS_1, "Match P1 #1"},
 	{ auto_match_p1_2, AUTO_POS_1, "Match P1 #2"},
@@ -240,7 +242,7 @@ void autonomous()
 	/* Create a new log in auto */
 	log_segment();
 	LOG_ERROR("In Autonomous");
-	//opcontrol();
+	auto_run();
 }
 
 /**

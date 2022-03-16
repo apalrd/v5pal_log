@@ -41,11 +41,11 @@ typedef enum
 /* Functions to print a message at the specified log levels
  * The funtion will print if the given file is set to log at or above this level
  */
-#define LOG_ALWAYS(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_ALWAYS,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);}}while(0)
-#define LOG_ERROR(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_ERROR,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);}}while(0)
-#define LOG_WARN(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_WARN,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);}}while(0)
-#define LOG_INFO(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_INFO,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);}}while(0)
-#define LOG_DEBUG(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_DEBUG,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);}}while(0)
+#define LOG_ALWAYS(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_ALWAYS,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);printf("\n");}}while(0)
+#define LOG_ERROR(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_ERROR,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);printf("\n");}}while(0)
+#define LOG_WARN(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_WARN,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);printf("\n");}}while(0)
+#define LOG_INFO(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_INFO,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);printf("\n");}}while(0)
+#define LOG_DEBUG(...) do{switch(log_check(__FILE__,__LINE__,LOG_LEVEL_DEBUG,LOG_LEVEL_FILE)){case 2: fprintf(fd,__VA_ARGS__); case 1: printf(__VA_ARGS__);printf("\n");}}while(0)
 
 /* Initialize the logger module, it then operates from its own task */
 void log_init();
