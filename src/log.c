@@ -1,4 +1,10 @@
-/* Log routines */
+/* Data Logger library for PROS V5
+ * Copyright (c) 2022 Andrew Palardy
+ * This code is subject to the BSD 2-clause 'Simplified' license
+ * See the LICENSE file for complete terms
+ */
+
+/* Required headers */
 #include "pros/apix.h"
 #include <stdio.h>
 #include <stdint.h>
