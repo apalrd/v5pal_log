@@ -2,45 +2,10 @@
 #include "pros/apix.h"
 #include <stdio.h>
 #include <stdint.h>
+
+/* Need to define log level for this file lol */
+#define LOG_LEVEL_FILE LOG_LEVEL_INFO
 #include "log.h"
-
-/**
- * Macros which are not exported
- */
-#define LOG_LEVEL_DEFAULT LOG_LEVEL_WARN
-
-/**
- *  Types which are not exported
- */
-
-/* Log file element type */
-typedef struct 
-{
-    const char * fname; /* File name of the file in question */
-    log_level_t level;  /* Level to log the file at */
-} log_file_t;
-
-/* Data log element type */
-typedef struct
-{
-    const char * pname; /* Name of the parameter */
-    /* Type of parameter (for use with subsequent union) */
-    enum
-    {
-        TYPE_INT,
-        TYPE_FLOAT,
-        TYPE_STRING
-    } ptype;
-    /* Data or data pointers for each type */
-    union
-    {
-        int dint;
-        double dfloat;
-        const char * dstring;
-    };
-    
-} log_element_t;
-
 
 /* Variables which are exported */
 FILE* fd;
@@ -49,17 +14,11 @@ FILE* dd;
 /* Variables which are not exported */
 static char dname[64]; /* File name of the data file and log file */
 static char fname[64]; /* The size of these strings is guaranteed by the naming convention */
-static log_file_t * lfiles;     /* Pointer to file -> log level array */
-static uint32_t lfiles_len;      /* Length of the array (real elements) */
-static uint32_t lfiles_alloc;    /* Length of the array allocation */
-static log_element_t * deles;   /* Pointer to log element data */
-static uint32_t deles_len;      /* Length of the array (real elements) */
-static uint32_t deles_alloc;    /* Length of the array allocation */
+static int dheader = 0; /* Indicate if header needs to be printed
 
 /* File open/reopen process (called from the task and from initialize */
-void log_reopen()
+void log_reopen(int segment)
 {
-    printf("log_reopen called\n");
     /* Variable indicating the uSD was previously inserted */
     static int uSD_last = 0;
 
@@ -68,7 +27,20 @@ void log_reopen()
 
     /* Check if uSD is inserted */
     int uSD_avail = usd_is_installed();
-    printf("USD status: %d\n",uSD_avail);
+
+    /* If segment is requested, perform close of existing file and pretend uSD
+     * was not inserted last time
+     */
+    if(segment)
+    {
+        /* Close fd and dd if open */
+        LOG_ALWAYS("Segment requested, opening with new file name");
+        fclose(fd);
+        fclose(dd);
+        fd = NULL;
+        dd = NULL;
+        uSD_last = false;
+    }
 
     /* If it is now installed and wasn't before, go through the opening process */
     if(uSD_avail && !uSD_last)
@@ -129,6 +101,9 @@ void log_reopen()
             LOG_ERROR("Error opening data file (%s)",dname);
         }
 
+        /* Since file is open, reset header status to 2, which will decrement to 1 at log_step*/
+        dheader = 2;
+
         /* Now that the file is open, we can write the first log entry */
         LOG_INFO("Log Files Opened");
     }
@@ -141,8 +116,8 @@ void log_reopen()
         fd = NULL;
         dd = NULL;
     }
-    /* If we didn't just go through the initial open process, reopen */
-    else
+    /* If the uSD is currently valid and was previously valid, reopen the file again */
+    else if(uSD_avail && uSD_last)
     {
         /* Raise the current task priority temporarily so we can ensure that the file handle
             * is null during the reopen, in case any other tasks try to write to the pointer
@@ -151,21 +126,21 @@ void log_reopen()
             * pointer is properly null when we begin the operation
             */
         LOG_DEBUG("About to swap file handles");
-        task_set_priority(CURRENT_TASK,TASK_PRIORITY_MAX);
+        //task_set_priority(CURRENT_TASK,TASK_PRIORITY_MAX);
         FILE* fd_temp = fd;
         fd = NULL;
         FILE* dd_temp = dd;
         dd = NULL;
-        task_set_priority(CURRENT_TASK,TASK_PRIORITY_DEFAULT-1);
+        //task_set_priority(CURRENT_TASK,TASK_PRIORITY_DEFAULT-1);
         /* Close the fd and reopen it */
         fclose(fd_temp);
         fd_temp = fopen(fname,"a");
         fclose(dd_temp);
         dd_temp = fopen(dname,"a");
-        task_set_priority(CURRENT_TASK,TASK_PRIORITY_MAX);
+        //task_set_priority(CURRENT_TASK,TASK_PRIORITY_MAX);
         fd = fd_temp;
         dd = dd_temp;
-        task_set_priority(CURRENT_TASK,TASK_PRIORITY_DEFAULT-1);
+        //task_set_priority(CURRENT_TASK,TASK_PRIORITY_DEFAULT-1);
 
         /* Check for errors */
         if(fd)
@@ -186,131 +161,72 @@ void log_reopen()
         }
         LOG_INFO("Log Files Reopened");
     }
+    /* Otherwise, uSD is not available and wasn't before */
+    else
+    {
+        LOG_INFO("uSD not inserted, unable to log");
+    }
 
     /* Update the last state */
     uSD_last = uSD_avail;
 }
 
-/* Logger task - continually attempt to reopen the log files every second */
-void log_task(void* param)
+/* Call to generate a new log segment (new csv, new txt) i.e. when changing modes */
+void log_segment()
 {
-    LOG_DEBUG("Entering the log task\n");
-    do
+    log_reopen(true);
+}
+
+/* Log Step checks if it's been more than a second and calls reopen if necessary */
+void log_step()
+{
+    /* decrement dheader if it's above 0 so we can write the header row */
+    if(dheader)
     {
-        log_reopen();
-        task_delay(1000);
-        LOG_DEBUG("Iterating the log task\n");
-    } while (1);
+        dheader--;
+    }
+    /* Store previous time */
+    static double time_last = 0.0;
+    /* Get new time */
+    double time_now = millis() / 1000.0;
+
+    /* If it's been a second or more, reopen */
+    if((time_now - time_last) > 1.0)
+    {
+        log_reopen(false);
+        time_last = time_now;
+    }
+
+    /* Make sure log file is valid before writing to it */
+    if(dd)
+    {
+        /* If printing headers, print TIME, else print the timestamp */
+        if(dheader)
+        {
+            fprintf(dd,"TIME");
+        }
+        else
+        {
+            fprintf(dd,"\n%08.03f",time_now);
+        }
+    }
 }
 
 /* Initialize the logger */
 void log_init()
 {
-    /* Initialize the lfiles buffer with 16 entries to start */
-    lfiles_len = 0;
-    lfiles_alloc = 16;
-    lfiles = malloc(lfiles_alloc * sizeof(log_file_t));
-    if(!lfiles)
-    {
-        printf("FAILED TO ALLOCATE LOG FILE ARRAY!\n");
-        exit(-1);
-    }
-
-    /* Initialize the deles buffer with 32 entries to start */
-    deles_len = 0;
-    deles_alloc = 32;
-    deles = malloc(deles_alloc * sizeof(log_element_t));
-    if(!deles)
-    {
-        printf("FAILED TO ALLOCATE DATA ELEMENT ARRAY!\n");
-        exit(-1);
-    }
-
     /* Open the logger if the uSD card is inserted */
-    log_reopen();
-
-    printf("Attempting to start logger task\n");
-
-    /* Start a new task for the logger to continually check and close/reopen the files */
-    task_t ltask = task_create(log_task,NULL,TASK_PRIORITY_DEFAULT,TASK_STACK_DEPTH_DEFAULT,"DataLogger");
-    if(!ltask)
-    {
-        printf("Failed to create task! Got %d\n",errno);
-    }
-    printf("Task created with state %d\n",task_get_state(ltask));
-    fflush(stdout);
-    task_delay(5000);
+    log_reopen(false);
 }
 
-/* Function to see if a logged file name exists, and insert it */
-static log_level_t log_file_idx(const char * fname)
-{
-    /* Iterate over the array to find if the file name exists */
-    int min = 0;
-    int max = lfiles_len-1;
-    int iter = 0;
-    while(min <= max)
-    {
-        /* Find the mid point of the two */
-        int mid = (min + max) / 2;
-        int ret = strcmp(fname,lfiles[mid].fname);
-        if(ret < 0)
-        {
-            max = mid - 1;
-        }
-        else if(ret > 0)
-        {
-            min = mid + 1;
-        }
-        else
-        {
-            /* They are equal, return this position */
-            return mid;
-        }
-    }
 
-    /* Not found, must insert it at the correct position in the array */
-    max++;
-
-    int copylen = lfiles_len - max;
-
-    lfiles_len++;
-
-    /* Check if the array is big enough to hold another element */
-    if(lfiles_len >= lfiles_alloc)
-    {
-        lfiles_alloc = lfiles_alloc + lfiles_alloc;
-        lfiles = realloc(lfiles,lfiles_alloc * sizeof(char *));
-        if(!lfiles)
-        {
-            printf("ERROR: Failed to realloc lfiles array\n");
-            exit(-1);
-        }
-    }
-    
-    /* Need to copy the rest of the array backwards to fit the new element */
-    for(int i = 1; i <= copylen; i++)
-    {
-        lfiles[lfiles_len-i] = lfiles[lfiles_len-i-1];
-    }
-
-    /* Insert the new element */
-    lfiles[max].fname = fname;
-    lfiles[max].level = LOG_LEVEL_DEFAULT;
-
-    /* Return the newly inserted position */
-    return max;
-    
-}
-
-/* Function to set the log level of a specific file */
-void log_set_level(const char * fname, log_level_t level)
-{
-
-}
-
-/* Internal function to check if a log at level should be printed or not, also prints the log header */
-int log_check(const char * fname, const int line,log_level_t level)
+/* Internal function to check if a log at level should be printed or not, also prints the log header
+ * Return values:
+ * 2 = log to both fd and printf
+ * 1 = log to printf only (fd is invalid)
+ * 0 = don't log
+ */
+int log_check(const char * fname, const int line,log_level_t level,log_level_t flevel)
 {
     /* Log level strings */
     static const char * log_names[] = 
@@ -325,22 +241,8 @@ int log_check(const char * fname, const int line,log_level_t level)
     /* Clamp level to valid values */
     level = (level > LOG_LEVEL_ALWAYS) ? LOG_LEVEL_ALWAYS : level;
 
-    /* Search through the file array to determine the index of the file */
-    int idx = log_file_idx(fname);
-
-    /* If we should not log this file at this level, return false */
-    if(lfiles[idx].level > level)
-    {
-        /* Don't log at this level */
-        return 0;
-    }
-
-
-    /* If the log file is not open, return false (can't log to null file) */
-    if(!fd)
-    {
-        printf("FD is invalid\n");
-    }
+    /* If we are below the required log level, exit now */
+    if(flevel > level) return 0;
 
     /* We should log this, so print the log header and then return true to allow the 
      * user message to be printed after
@@ -348,18 +250,49 @@ int log_check(const char * fname, const int line,log_level_t level)
 
     /* Print the information */
     double time = millis() / 1000.0;
-    //fprintf(fd,"\n%5.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
-    printf("\n%06.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
+    printf("\n%08.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
 
-    return 0;
+    /* If fd is invalid, end here, otherwise print to the file as well */
+    if(!fd) return 1;
+
+    /* Print the same information as earlier to the file */
+    fprintf(fd,"\n%08.3f [%s] in %s line %d: ",time,log_names[level],fname,line);
+
+    /* Tell the macro to print to the file */
+    return 2;
 }
 
-/* Function to log a data point as a double or int 
- * These functions do NOT assume the name pointer continues to be valid, they instead
- * copy the string
- */
-void log_data_dbl(const char * name, const double val);
-void log_data_int(const char * name, const int val);
+/* Functions to log data */
+void log_data_int(const char * pname, int data)
+{
+    /* If data is safe to access, print to it */
+    if(dd)
+    {
+        /* If we need to print the header, do that instead of data */
+        if(dheader)
+        {
+            fprintf(dd,",%s",pname);
+        }
+        else
+        {
+            fprintf(dd,",%d",data);
+        }
+    }
 
-/* Function to log a data point as a string - must be less than 64 chars and not contain any quotations */
-void log_data_str(const char * name, const char * val);
+}
+void log_data_dbl(const char * pname, double data)
+{
+    /* If data is safe to access, print to it */
+    if(dd)
+    {
+        /* If we need to print the header, do that instead of data */
+        if(dheader)
+        {
+            fprintf(dd,",%s",pname);
+        }
+        else
+        {
+            fprintf(dd,",%f",data);
+        }
+    }
+}

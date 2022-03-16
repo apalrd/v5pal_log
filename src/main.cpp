@@ -52,84 +52,13 @@ const auto_routine_t auto_list[] =
  */
 void initialize() 
 {
-	printf("Begun Init\n");
-
 	/* Initialize logger */
 	log_init();
 
 	LOG_INFO("In Initialize");
 
-#if 0
-	/* Competition mode channels  */
-	log_param("comp_dis");
-	log_param("comp_auto");
-	log_param("comp_conn");
-
-	/* Battery data */
-	log_param("batt_cap");
-	log_param("batt_volt");
-	log_param("batt_cur");
-	log_param("batt_temp");
-
-	/* Controller master channels - ints first, then floats */
-	log_param("mas_dn");
-	log_param("mas_up");
-	log_param("mas_lt");
-	log_param("mas_rt");
-	log_param("mas_a");
-	log_param("mas_b");
-	log_param("mas_x");
-	log_param("mas_y");
-	log_param("mas_l1");
-	log_param("mas_l2");
-	log_param("mas_r1");
-	log_param("mas_r2");
-	log_param("mas_lx");
-	log_param("mas_ly");
-	log_param("mas_rx");
-	log_param("mas_ry");
-
-	/* IMU channels */
-	log_param("imu_cal");
-	log_param("imu_hdg");
-	log_param("imu_rot");
-	log_param("imu_euler_pitch");
-	log_param("imu_euler_yaw");
-	log_param("imu_euler_roll");
-	log_param("imu_acc_x");
-	log_param("imu_acc_y");
-	log_param("imu_acc_z");
-
-	/* GPS channels */
-	log_param("gps_x");
-	log_param("gps_y");
-	log_param("gps_pitch");
-	log_param("gps_yaw");
-	log_param("gps_roll");
-	log_param("gps_hdg");
-	log_param("gps_rot");
-	log_param("gps_acc_x");
-	log_param("gps_acc_y");
-	log_param("gps_acc_z");
-	log_param("gps_error");
-	log_param("gps_gyro_x");
-	log_param("gps_gyro_y");
-	log_param("gps_gyro_z");
-
-	/* Encoder channels */
-	log_param("left_vel");
-	log_param("left_cur");
-	log_param("left_pos");
-	log_param("left_volt");
-	log_param("left_temp");
-	log_param("right_vel");
-	log_param("right_cur");
-	log_param("right_pos");
-	log_param("right_volt");
-	log_param("right_temp");
-#endif
-	/* Call LV test function */
-	//auto_picker(auto_list, sizeof(auto_list)/sizeof(auto_routine_t));
+	/* Call Auto Picker */
+	auto_picker(auto_list, sizeof(auto_list)/sizeof(auto_routine_t));
 
 }
 
@@ -140,156 +69,110 @@ static pros::Motor drive_right(10,pros::E_MOTOR_GEARSET_18,false,pros::E_MOTOR_E
 /* Get competition mode */
 void log_comp_data()
 {
-	int data[3];
-	data[0] = pros::competition::is_disabled();
-	data[1] = pros::competition::is_autonomous();
-	data[2] = pros::competition::is_connected();
-	//log_data(3,data,0,0);
+	log_data_int("COMP_DISABLED",pros::competition::is_disabled());
+	log_data_int("COMP_AUTONOMOUS",pros::competition::is_autonomous());
+	log_data_int("COMP_CONNECTED",pros::competition::is_connected());
 }
 
 /* Get battery data */
 void log_batt_data()
 {
-	double dataDbl[4];
-	dataDbl[0] = pros::battery::get_capacity();
-	dataDbl[1] = pros::battery::get_voltage();
-	dataDbl[2] = pros::battery::get_current();
-	dataDbl[3] = pros::battery::get_temperature();
-	//log_data(0,0,4,dataDbl);
+	log_data_dbl("BATT_CAP",pros::battery::get_capacity());
+	log_data_dbl("BATT_VOLT",pros::battery::get_voltage());
+	log_data_dbl("BATT_CUR",pros::battery::get_current());
+	log_data_dbl("BATT_TEMP",pros::battery::get_temperature());
 }
 
 /* Get control data */
 void log_ctrl_data()
 {
-	int dataInt[12];
-	double dataDbl[4];
 	/* Keep a controller instance */
 	static pros::Controller master(CONTROLLER_MASTER);
 
 	/* Read axes */
-	dataDbl[0] = master.get_analog(ANALOG_LEFT_Y);
-	dataDbl[1] = master.get_analog(ANALOG_LEFT_X);
-	dataDbl[2] = master.get_analog(ANALOG_RIGHT_Y);
-	dataDbl[3] = master.get_analog(ANALOG_RIGHT_X);
+	log_data_dbl,("CRTL_MSTR_LY",master.get_analog(ANALOG_LEFT_Y));
+	log_data_dbl,("CRTL_MSTR_LX",master.get_analog(ANALOG_LEFT_X));
+	log_data_dbl,("CRTL_MSTR_RY",master.get_analog(ANALOG_RIGHT_Y));
+	log_data_dbl,("CRTL_MSTR_RX",master.get_analog(ANALOG_RIGHT_X));
 
 	/* Control motors */
-	double forward = dataDbl[0];
-	double turn = dataDbl[3];
+	double forward = master.get_analog(ANALOG_LEFT_Y);
+	double turn = master.get_analog(ANALOG_RIGHT_X);
 	double left = forward + turn;
 	double right = forward - turn;
 	drive_left.move(left);
 	drive_right.move(right);
 
 	/* Read buttons for D-pad */
-	dataInt[0] = master.get_digital(DIGITAL_LEFT);
-	dataInt[1] = master.get_digital(DIGITAL_RIGHT);
-	dataInt[2] = master.get_digital(DIGITAL_UP);
-	dataInt[3] = master.get_digital(DIGITAL_DOWN);
+	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_LEFT));
+	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_RIGHT));
+	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_UP));
+	log_data_int("CTRL_MSTR_DL",master.get_digital(DIGITAL_DOWN));
 
 	/* Read buttons for ABXY */
-	dataInt[4] = master.get_digital(DIGITAL_A);
-	dataInt[5] = master.get_digital(DIGITAL_B);
-	dataInt[6] = master.get_digital(DIGITAL_X);
-	dataInt[7] = master.get_digital(DIGITAL_Y);
+	log_data_int("CTRL_MSTR_DA",master.get_digital(DIGITAL_A));
+	log_data_int("CTRL_MSTR_DB",master.get_digital(DIGITAL_B));
+	log_data_int("CTRL_MSTR_DX",master.get_digital(DIGITAL_X));
+	log_data_int("CTRL_MSTR_DY",master.get_digital(DIGITAL_Y));
 
 	/* Read Triggers */
-	dataInt[8] = master.get_digital(DIGITAL_L1);
-	dataInt[9] = master.get_digital(DIGITAL_L2);
-	dataInt[10] = master.get_digital(DIGITAL_R1);
-	dataInt[11] = master.get_digital(DIGITAL_R2);
-
-	/* Publish data */
-	//log_data(12,dataInt,4,dataDbl);
+	log_data_int("CTRL_MSTR_L1",master.get_digital(DIGITAL_L1));
+	log_data_int("CTRL_MSTR_L2",master.get_digital(DIGITAL_L2));
+	log_data_int("CTRL_MSTR_R1",master.get_digital(DIGITAL_R1));
+	log_data_int("CTRL_MSTR_R2",master.get_digital(DIGITAL_R2));
 }
 
 void log_imu_data()
 {
-	/* Data arrays */
-	int dataInt[1];
-	double dataDbl[8];
 	/* IMU */
 	static pros::IMU emu(7);
 
 	/* Get is_calibrating */
-	dataInt[0] = emu.is_calibrating();
+	log_data_int("IMU_CAL",emu.is_calibrating());
 
 	/* Get Rot and Heading */
-	dataDbl[0] = emu.get_heading();
-	dataDbl[1] = emu.get_rotation();
+	log_data_dbl,("IMU_HDG",emu.get_heading());
+	log_data_dbl,("IMU_ROT",emu.get_rotation());
 
 	/* Get Euler angles */
     pros::c::euler_s_t euler = emu.get_euler();
-	dataDbl[2] = euler.pitch;
-	dataDbl[3] = euler.yaw;
-	dataDbl[4] = euler.roll;
+	log_data_dbl,("IMU_PITCH",euler.pitch);
+	log_data_dbl,("IMU_YAW",euler.yaw);
+	log_data_dbl,("IMU_ROLL",euler.roll);
 
 	/* Get Accels */
 	pros::c::imu_gyro_s_t accel = emu.get_accel();
-	dataDbl[5] = accel.x;
-	dataDbl[6] = accel.y;
-	dataDbl[7] = accel.z;
-
-	/* Log data */
-	//log_data(1,dataInt,8,dataDbl);
+	log_data_dbl,("IMU_ACC_X",accel.x);
+	log_data_dbl,("IMU_ACC_Y",accel.y);
+	log_data_dbl,("IMU_ACC_Z",accel.z);
 }
 
 /* Log GPS Data */
 void log_gps_data()
 {
-	/* Data arrays */
-	double dataDbl[14];
-
 	/* Static GPS */
 	static pros::GPS gps(8);
 
 	/* Get Status */
 	pros::c::gps_status_s_t status = gps.get_status();
-	dataDbl[0] = status.x;
-	dataDbl[1] = status.y;
-	dataDbl[2] = status.pitch;
-	dataDbl[3] = status.yaw;
-	dataDbl[4] = status.roll;
+	log_data_dbl,("GPS_STS_X",status.x);
+	log_data_dbl,("GPS_STS_Y",status.y);
+	log_data_dbl,("GPS_PITCH",status.pitch);
+	log_data_dbl,("GPS_YAW",status.yaw);
+	log_data_dbl,("GPS_ROLL",status.roll);
 
 	/* Heading and rotation */
-	dataDbl[5] = gps.get_heading();
-	dataDbl[6] = gps.get_rotation();
+	log_data_dbl,("GPS_HDG",gps.get_heading());
+	log_data_dbl,("GPS_ROT",gps.get_rotation());
 
 	/* Accles */
 	pros::c::gps_accel_s_t accel = gps.get_accel();
-	dataDbl[7] = accel.x;
-	dataDbl[8] = accel.y;
-	dataDbl[9] = accel.z;
+	log_data_dbl,("GPS_ACC_X",accel.x);
+	log_data_dbl,("GPS_ACC_Y",accel.y);
+	log_data_dbl,("GPS_ACC_Z",accel.z);
 
 	/* Precision */
-	dataDbl[10] = gps.get_error();
-
-	/* Gyro rates */
-	//pros::c::gps_gyro_s_t gyro = gps.get_gyro_rate();
-	//dataDbl[11] = gyro.x;
-	//dataDbl[12] = gyro.y;
-	//dataDbl[13] = gyro.z;
-
-	/* Publish data */
-	//log_data(0,0,14,dataDbl);
-
-	#if 0
-	printf("GPS x=%1.3f y=%1.3f h=%3.1f r=%2.3f e=%3.3f pt%2.1f yw%3.1f rl%2.1f", 
-			dataDbl[0],
-			dataDbl[1],
-			dataDbl[5],
-			dataDbl[6],
-			dataDbl[10],
-			dataDbl[2],
-			dataDbl[3],
-			dataDbl[4]);
-	printf("ax%0.2f ay%0.2f az%0.2f gx%f gy%f gz%f\n",
-			dataDbl[7],
-			dataDbl[8],
-			dataDbl[9],
-			dataDbl[11],
-			dataDbl[12],
-			dataDbl[13]);
-	#endif
+	log_data_dbl,("GPS_ERROR",gps.get_error());
 }
 
 /* Log motor data */
@@ -321,7 +204,7 @@ void log_motor_data()
  */
 void disabled()
 {
-	printf("In disabled\n");
+	log_segment();
 	LOG_ERROR("In Disabled");
 	//opcontrol();
 }
@@ -337,7 +220,7 @@ void disabled()
  */
 void competition_initialize()
 {
-	printf("In competition_initialize\n");
+	log_segment();
 	LOG_ERROR("In Competition Initialize");
 }
 
@@ -354,7 +237,8 @@ void competition_initialize()
  */
 void autonomous() 
 {
-	printf("In autonomous\n");
+	/* Create a new log in auto */
+	log_segment();
 	LOG_ERROR("In Autonomous");
 	//opcontrol();
 }
@@ -374,13 +258,15 @@ void autonomous()
  */
 void opcontrol() 
 {
-	printf("In opcontrol\n");
+	/* Create new log in opcontrol */
+	log_segment();
 	LOG_ERROR("In Opcontrol");
 	static uint32_t prev_time = pros::c::millis();
 	while(1)
 	{
+		/* log_step MUST be first */
+		log_step();
 		/* read axes and buttons */
-		//log_step();
 		log_comp_data();
 		log_batt_data();
 		log_ctrl_data();
@@ -389,6 +275,5 @@ void opcontrol()
 		log_motor_data();
 		LOG_DEBUG("The task has run again");
 		pros::c::task_delay_until(&prev_time,20);
-		return;
 	}
 }
