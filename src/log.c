@@ -82,8 +82,8 @@ void log_reopen(int segment)
         }
 
         /* Determine filenames of the data log and message log */
-        sprintf(fname,"/usd/log%06d.txt",idx);
-        sprintf(dname,"/usd/data%06d.csv",idx);
+        sprintf(fname,"/usd/log%05d.txt",idx);
+        sprintf(dname,"/usd/dat%05d.csv",idx);
 
         /* Open the new files */
         fd = fopen(fname,"w");
