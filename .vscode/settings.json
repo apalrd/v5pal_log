@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "lvgl.h": "c",
-        "array": "cpp",
-        "vector": "cpp",
-        "xstring": "cpp",
-        "xutility": "cpp"
-    }
-}
