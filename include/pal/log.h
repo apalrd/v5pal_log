@@ -72,6 +72,9 @@ void log_step();
 /* Call to generate a new log segment (new csv, new txt) i.e. when changing modes */
 void log_segment();
 
+/* Function to get the most recent log id, or -1 if none */
+int log_id();
+
 #ifdef __cplusplus
 }
 #endif

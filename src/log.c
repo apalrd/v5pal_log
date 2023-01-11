@@ -20,7 +20,14 @@ FILE* dd;
 /* Variables which are not exported */
 static char dname[64]; /* File name of the data file and log file */
 static char fname[64]; /* The size of these strings is guaranteed by the naming convention */
-static int dheader = 0; /* Indicate if header needs to be printed
+static int dheader = 0; /* Indicate if header needs to be printed */
+static int fnum = -1;
+
+/* Function to return the file index */
+int log_id()
+{
+    return fnum;
+}
 
 /* File open/reopen process (called from the task and from initialize */
 void log_reopen(int segment)
@@ -71,6 +78,7 @@ void log_reopen(int segment)
             fclose(fidx);
         }
         LOG_INFO("New file index is %d",idx);
+        fnum = idx;
 
         /* In any case, reopen the index file to write the latest file index */
         fidx = fopen("/usd/index.txt","w");
@@ -121,6 +129,7 @@ void log_reopen(int segment)
         fclose(dd);
         fd = NULL;
         dd = NULL;
+        fnum = -1;
     }
     /* If the uSD is currently valid and was previously valid, reopen the file again */
     else if(uSD_avail && uSD_last)
